@@ -6,10 +6,10 @@ import re
 import base64
 import os
 
-# Автоматически берем ключи из безопасных настроек Render
+# Безопасное чтение ключей из панели управления Render (Гитхаб их не увидит)
 TOKEN = os.getenv("DISCORD_TOKEN")
 VT_API_KEY = os.getenv("VT_API_KEY")
-ALLOWED_USER_ID = 123456789012345678  # ⚠️ СЮДА ВСТАВЬ СВОЙ ID ДИСКОРДА ЧИСЛОМ (без кавычек)
+ALLOWED_USER_ID = 1281520404057427994  # Твой Дискорд ID прописан числом
 
 IS_ACTIVE = True
 intents = discord.Intents.default()
@@ -75,7 +75,7 @@ async def on_message(message):
     if message.author.bot: return
     global IS_ACTIVE
 
-    # Команды управления защитой (работают только для тебя)
+    # Команды управления защитой (работают только для твоего ID)
     if message.content.startswith("!mrtp"):
         if message.author.id != ALLOWED_USER_ID: return
         args = message.content.split()
