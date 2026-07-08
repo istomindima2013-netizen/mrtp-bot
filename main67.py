@@ -1,15 +1,16 @@
 import discord
 from discord.ext import commands
 import aiohttp
+from aiohttp import web  # Добавили встроенный веб-сервер
 import asyncio
 import re
 import base64
 import os
 
-# Безопасное чтение ключей из панели управления Render (Гитхаб их не увидит)
+# Чтение ключей из панели управления Render
 TOKEN = os.getenv("DISCORD_TOKEN")
 VT_API_KEY = os.getenv("VT_API_KEY")
-ALLOWED_USER_ID = 1281520404057427994  # Твой Дискорд ID прописан числом
+ALLOWED_USER_ID = 1281520404057427994  # Твой Дискорд ID
 
 IS_ACTIVE = True
 intents = discord.Intents.default()
@@ -46,12 +47,10 @@ async def queue_worker():
             suspicious = stats.get('suspicious', 0)
             malicious = stats.get('malicious', 0)
             
-            # 1. Жесткое нарушение: Малварь или 4+ подозрительных
             if malicious > 0 or suspicious >= 4:
                 await message.delete()
                 await message.channel.send(f"❌ Сообщение от {message.author.mention} удалено! Обнаружен опасный вирус ({malicious} малварь, {suspicious} подозрительно). Выдан варн!")
             
-            # 2. Легкое нарушение: от 1 подозрительного
             elif suspicious >= 1:
                 bad_antiviruses = [av for av, res in results.items() if res['category'] in ['malicious', 'suspicious']]
                 av_list = ", ".join(bad_antiviruses[:10])
@@ -63,19 +62,32 @@ async def queue_worker():
         except Exception as e:
             print(f"Ошибка очереди: {e}")
         url_queue.task_done()
-        await asyncio.sleep(15)  # Ограничение под бесплатный тариф VirusTotal
+        await asyncio.sleep(15)
+
+# Ответ для Render, что наш "сайт" живой
+async def web_handle(request):
+    return web.Response(text="Бот MRTP онлайн и успешно работает!")
 
 @bot.event
 async def on_ready():
-    print(f"🟢 Проект MRTP успешно запущен на Render! Бот {bot.user.name} охраняет хату марселя.")
+    print(f"🟢 Проект MRTP успешно запущен! Бот {bot.user.name} охраняет хату марселя.")
     bot.loop.create_task(queue_worker())
+    
+    # 🔥 Обманка для Render: запускаем фоновый сервер на порту хостинга
+    app = web.Application()
+    app.router.add_get('/', web_handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.getenv("PORT", 10000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"🌐 Микро веб-сервер запущен на порту {port}")
 
 @bot.event
 async def on_message(message):
     if message.author.bot: return
     global IS_ACTIVE
 
-    # Команды управления защитой (работают только для твоего ID)
     if message.content.startswith("!mrtp"):
         if message.author.id != ALLOWED_USER_ID: return
         args = message.content.split()
@@ -88,7 +100,6 @@ async def on_message(message):
                 await message.channel.send("🟢 **Защита MRTP ВКЛЮЧЕНА.** Сервер под охраной.")
         return
 
-    # Перехват ссылок
     urls = URL_REGEX.findall(message.content)
     if urls and IS_ACTIVE:
         for url in urls:
