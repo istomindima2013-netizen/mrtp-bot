@@ -12,6 +12,11 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 VT_API_KEY = os.getenv("VT_API_KEY")
 PORT = int(os.getenv("PORT", 8080))
 
+if not TOKEN:
+    print("❌ СТОП: В настройках Render переменная DISCORD_TOKEN ВООБЩЕ ПУСТАЯ или названа неверно!")
+else:
+    print(f"🤖 Токен обнаружен! Длина: {len(TOKEN)} символов. Начинается на: {TOKEN[:10]}...")
+
 # Статус защиты (включен/выключен) хранится прямо в памяти
 BOT_STATUS = {"is_active": True}
 
